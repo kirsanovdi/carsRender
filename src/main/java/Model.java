@@ -12,6 +12,7 @@ import static org.lwjgl.opengl.GL46.*;
 
 public class Model {
     private  int indicesSize, verticesSize;
+    public boolean[] vertVisibility;
 
     private Engine engine;
 
@@ -56,10 +57,12 @@ public class Model {
         verticesSize = car.vertices.size();
         indicesSize = car.faces.size() * 3;
 
+        this.vertVisibility = new boolean[skeleton.keypoint_labels.size()];
         this.position = new Vector3f(position);
+        System.out.println("Model " + this.toString() + "\t" + position + "\t" + toJSON + "\t created");
     }
 
-    public void switchRenderType(Instruction rt){
+    public synchronized void switchRenderType(Instruction rt){
         switch (rt){
             case FULL -> {
                 shader = shader_standard;
@@ -87,21 +90,25 @@ public class Model {
             }
         }
     }
-    public void draw(Camera camera) {
+    public void calcVisibility(){
+        for(int i = 0; i < vertVisibility.length; i++){
+            final Vector3f v3f = vfl_revY(getTriangleBySkeletonID(i));
+            final Vector3f curPos = new Vector3f(v3f.x + position.x, v3f.y + position.y, v3f.z + position.z);
+
+            vertVisibility[i] = engine.isOccluded(curPos, engine.display.mainCamera);
+        }
+    }
+    public synchronized void draw(Camera camera) {
         shader.activate();
         shader.transferCamera(camera);
         glController.update();
         glController.setupVAO();
         glDrawElements(GL_DRAWMODE, getIndicesSize(), GL_UNSIGNED_INT, 0);
     }
-    public int getIndicesSize() {
-        return indicesSize;
-    }
-    public void delete() {
+    public synchronized void delete() {
         glController.destroy();
+        System.out.println("Model " + this.toString() + "\t deleted");
     }
-
-
 
     public void move(float x, float y , float z){
         position.add(x, y, z);
@@ -110,8 +117,11 @@ public class Model {
 
     }
 
+    private int getIndicesSize() {
+        return indicesSize;
+    }
 
-    public boolean isOccluded(Vector3f v, Camera camera){
+    public synchronized boolean isOccluded(Vector3f v, Camera camera){
         boolean result = false;
         final Vector3f origin = new Vector3f(camera.position.x, camera.position.y, camera.position.z);
         final Vector3f dir = new Vector3f(v).sub(origin);
@@ -129,6 +139,7 @@ public class Model {
         }
         return result;
     }
+
     private List<Float> getTriangleBySkeletonID(int i){
         return car.vertices.get(car.pts.get(skeleton.keypoint_labels.get(i)));
     }
@@ -140,7 +151,7 @@ public class Model {
             vertices[i * 5] = v3f.x + position.x;
             vertices[i * 5 + 1] = v3f.y + position.y;
             vertices[i * 5 + 2] = v3f.z + position.z;
-            float height = ((1f - 1f/(1f + v3f.y * v3f.y)) / 2f) * ((1f - 1f/(1f + v3f.y*v3f.y)) / 2f);
+            float height = ((1f - 1f/(1f + v3f.y * v3f.y)) / 2f) * ((1f - 1f/(1f + v3f.z*v3f.z)) / 2f);
             vertices[i * 5 + 3] = height;
             vertices[i * 5 + 4] = (height*100f)%1f;
         }
@@ -182,8 +193,8 @@ public class Model {
             vertices[i * 5] = v3f.x + position.x;
             vertices[i * 5 + 1] = v3f.y + position.y;
             vertices[i * 5 + 2] = v3f.z + position.z;
-            final Vector3f curPos = new Vector3f(v3f.x + position.x, v3f.y + position.y, v3f.z + position.z);
-            final float height = (engine.isOccluded(curPos, engine.display.mainCamera)?1f:0f);
+            //final Vector3f curPos = new Vector3f(v3f.x + position.x, v3f.y + position.y, v3f.z + position.z);
+            final float height = (vertVisibility[i]?1f:0f);
             vertices[i * 5 + 3] = height;
             vertices[i * 5 + 4] = height;
         }

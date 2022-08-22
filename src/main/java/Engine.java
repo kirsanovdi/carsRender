@@ -28,31 +28,36 @@ public class Engine {
             modelsList[i] = files[i].getAbsolutePath();
         }
 
-        models.add(new Model(new Vector3f(0f, 0f, 0f), modelsList[0], "skeleton.json", this));
-        models.add(new Model(new Vector3f(2.5f, 0f, 0f), modelsList[1], "skeleton.json", this));
-        models.add(new Model(new Vector3f(5f, 0f, 0f), modelsList[2], "skeleton.json", this));
+        //no 4
 
-        models.add(new Model(new Vector3f(0f, -5f, 0f), "src\\main\\resources\\other\\pile3d.json", "pile.json", this));
+        models.add(new Model(new Vector3f(0f, 0f, -6f), modelsList[0], "skeleton.json", this));
+        models.add(new Model(new Vector3f(2.5f, 0f, -6f), modelsList[1], "skeleton.json", this));
+        models.add(new Model(new Vector3f(5f, 0f, -6f), modelsList[2], "skeleton.json", this));
 
-        System.out.println(1);
-        /*models.add(new Model(new Vector3f(0f, 0f, -5f), modelsList[0], "skeleton.json", this));
-        models.add(new Model(new Vector3f(2.5f, 0f, -5f), modelsList[1], "skeleton.json", this));
-        models.add(new Model(new Vector3f(5f, 0f, -5f), modelsList[2], "skeleton.json", this));
+        //models.add(new Model(new Vector3f(0f, -1f, 0f), "src\\main\\resources\\other\\pile3d.json", "pile.json", this));
 
-        models.add(new Model(new Vector3f(0f, 0f, -10f), modelsList[0], "skeleton.json", this));
-        models.add(new Model(new Vector3f(2.5f, 0f, -10f), modelsList[1], "skeleton.json", this));
-        models.add(new Model(new Vector3f(5f, 0f, -10f), modelsList[2], "skeleton.json", this));*/
+        models.add(new Model(new Vector3f(0f, 0f, -12f), modelsList[3], "skeleton.json", this));
+        models.add(new Model(new Vector3f(2.5f, 0f, -12f), modelsList[5], "skeleton.json", this));
+        models.add(new Model(new Vector3f(5f, 0f, -12f), modelsList[6], "skeleton.json", this));
+
+        models.add(new Model(new Vector3f(0f, 0f, -18f), modelsList[7], "skeleton.json", this));
+        models.add(new Model(new Vector3f(2.5f, 0f, -18f), modelsList[8], "skeleton.json", this));
+        models.add(new Model(new Vector3f(5f, 0f, -18f), modelsList[9], "skeleton.json", this));
+
+        for (int i = 0; i < 5; i++) {
+            for (int j = 0; j < 12; j++) {
+                models.add(new Model(new Vector3f(2f * (float) i - 2f, -1f, -2f * (float) j), "src\\main\\resources\\other\\pile3d.json", "pile.json", this));
+            }
+        }
 
     }
 
     public boolean isOccluded(Vector3f v3f, Camera camera) {
         boolean result = false;
-        synchronized (models) {
-            for (Model m : models) {
-                if (m.isOccluded(v3f, camera)) {
-                    result = true;
-                    break;
-                }
+        for (Model m : models) {
+            if (m.isOccluded(v3f, camera)) {
+                result = true;
+                break;
             }
         }
         return result;
@@ -76,10 +81,8 @@ public class Engine {
     }
 
     public void switchRenderType(Instruction rt) {
-        synchronized (models) {
-            for (Model m : models) {
-                m.switchRenderType(rt);
-            }
+        for (Model m : models) {
+            m.switchRenderType(rt);
         }
     }
 
@@ -87,10 +90,8 @@ public class Engine {
      * not on engine
      */
     public void drawModels(Camera camera) {
-        synchronized (models) {
-            for (Model m : models) {
-                m.draw(camera);
-            }
+        for (Model m : models) {
+            m.draw(camera);
         }
     }
 
@@ -101,16 +102,35 @@ public class Engine {
     }
 
     private void processEngine() {
+        final int k = 4;
+        final int mc = models.size();
+        final int perThread = mc/k;
+        simpleThread[] simpleThreads = new simpleThread[k];
+        for (int i = 0; i < k; i++){
+            final int r = i;
+            simpleThreads[i] = new simpleThread();
+            simpleThreads[i].changeProcess(() -> {
+                for(int j = perThread * r; j <= Math.min(perThread * (r + 1), mc - 1); j++){
+                    models.get(j).calcVisibility();
+                }
+            });
+            simpleThreads[i].start();
+        }
+
         while (!stop) {
-            Model m = models.get(0);
-            synchronized (m) {
-                //m.move(0f, 0f, 0.02f);
-            }
+
+            //for (Model m : models) {
+            //    m.calcVisibility();
+            //}
+
             try {
-                Thread.sleep(100L);
+                Thread.sleep(10L);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
+        }
+        for(int i = 0; i < k; i++){
+            simpleThreads[i].stop();
         }
     }
 

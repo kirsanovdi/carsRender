@@ -67,5 +67,6 @@ public class CLint {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        System.out.println("CLint stopped");
     }
 }
