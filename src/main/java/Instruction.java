@@ -1,0 +1,3 @@
+public enum Instruction {
+    STOP, PAUSE, CONTINUE, READLINE, FULL, SKELETON, JOINTS_ONLY
+}
