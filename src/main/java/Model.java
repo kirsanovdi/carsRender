@@ -45,10 +45,10 @@ public class Model {
         public List<List<Integer>> triangles;
     }
 
-    public Model(Vector3f position, String toJSON, Engine engine) {
+    public Model(Vector3f position, String toJSON, String skeletonName, Engine engine) {
         this.engine = engine;
         this.car = parseJSON(toJSON, Car.class);
-        this.skeleton = parseJSON("C:\\Users\\dimak\\IdeaProjects\\carsRender\\src\\main\\resources\\other\\skeleton.json", Skeleton.class);
+        this.skeleton = parseJSON("src\\main\\resources\\other\\" + skeletonName, Skeleton.class);
 
         this.shader = shader_standard;
         this.glController = new GlController(this::getIndices_standard, this::getVertices_standard);
@@ -57,60 +57,6 @@ public class Model {
         indicesSize = car.faces.size() * 3;
 
         this.position = new Vector3f(position);
-    }
-
-    public void move(float x, float y , float z){
-        position.add(x, y, z);
-    }
-
-    private static String getStrFromFile(String path) {
-        String result = "";
-        try {
-            result = Files.readString(new File(path).toPath());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return result;
-    }
-
-    private <T> T parseJSON(String path, Class<T> T) {
-        return new Gson().fromJson(getStrFromFile(path), T);
-    }
-
-    public boolean isOccluded(Vector3f v, Camera camera){
-        boolean result = false;
-        final Vector3f origin = new Vector3f(camera.position.x, camera.position.y, camera.position.z);
-        final Vector3f dir = new Vector3f(v).sub(origin);
-        for (List<Integer> triangle: skeleton.triangles) {
-            if(occlusion(
-                    origin,
-                    dir,
-                    vfl_revY(getTriangleBySkeletonID(triangle.get(0))).add(position),
-                    vfl_revY(getTriangleBySkeletonID(triangle.get(1))).add(position),
-                    vfl_revY(getTriangleBySkeletonID(triangle.get(2))).add(position)
-            )){
-                result = true;
-            }
-        }
-        return result;
-    }
-
-    private static boolean occlusion(Vector3f origin, Vector3f dir, Vector3f a, Vector3f b, Vector3f c){
-        final float r = 0.1f;
-        Vector3f point = new Vector3f(origin).add(dir);
-        if (point.distance(a) < r || point.distance(b) < r || point.distance(c) < r) return false;
-
-        float k = Intersectionf.intersectRayTriangle(origin, dir, a, b, c, 0.001f);
-
-        return k >= 0f && k < 1f;
-    }
-
-    private static Vector3f vfl_revY(List<Float> list) {
-        return new Vector3f(list.get(0), -list.get(1), list.get(2));
-    }
-
-    private List<Float> getTriangleBySkeletonID(int i){
-        return car.vertices.get(car.pts.get(skeleton.keypoint_labels.get(i)));
     }
 
     public void switchRenderType(Instruction rt){
@@ -128,7 +74,7 @@ public class Model {
                 GL_DRAWMODE = GL_TRIANGLES;
                 glController.destroy();
                 glController = new GlController(this::getIndices_skeleton, this::getVertices_skeleton);
-                verticesSize = 32;
+                verticesSize = skeleton.keypoint_labels.size();
                 indicesSize = skeleton.triangles.size() * 3;
             }
             case JOINTS_ONLY -> {
@@ -136,18 +82,55 @@ public class Model {
                 GL_DRAWMODE = GL_LINES;
                 glController.destroy();
                 glController = new GlController(this::getIndices_joints, this::getVertices_joints);
-                verticesSize = 32;
+                verticesSize = skeleton.keypoint_labels.size();
                 indicesSize = skeleton.joints.size() * 2;
             }
         }
     }
-
     public void draw(Camera camera) {
         shader.activate();
         shader.transferCamera(camera);
         glController.update();
         glController.setupVAO();
         glDrawElements(GL_DRAWMODE, getIndicesSize(), GL_UNSIGNED_INT, 0);
+    }
+    public int getIndicesSize() {
+        return indicesSize;
+    }
+    public void delete() {
+        glController.destroy();
+    }
+
+
+
+    public void move(float x, float y , float z){
+        position.add(x, y, z);
+    }
+    public void rotate(float aX, float aY, float aZ){
+
+    }
+
+
+    public boolean isOccluded(Vector3f v, Camera camera){
+        boolean result = false;
+        final Vector3f origin = new Vector3f(camera.position.x, camera.position.y, camera.position.z);
+        final Vector3f dir = new Vector3f(v).sub(origin);
+        for (List<Integer> triangle: skeleton.triangles) {
+            if(occlusion(
+                    origin,
+                    dir,
+                    vfl_revY(getTriangleBySkeletonID(triangle.get(0))).add(position),
+                    vfl_revY(getTriangleBySkeletonID(triangle.get(1))).add(position),
+                    vfl_revY(getTriangleBySkeletonID(triangle.get(2))).add(position)
+            )){
+                result = true;
+                break;
+            }
+        }
+        return result;
+    }
+    private List<Float> getTriangleBySkeletonID(int i){
+        return car.vertices.get(car.pts.get(skeleton.keypoint_labels.get(i)));
     }
 
     private float[] getVertices_standard() {
@@ -163,7 +146,6 @@ public class Model {
         }
         return vertices;
     }
-
     private int[] getIndices_standard() {
         int[] indices = new int[indicesSize];
         for (int i = 0; i < indicesSize; i++) {
@@ -185,7 +167,6 @@ public class Model {
         }
         return vertices;
     }
-
     private int[] getIndices_skeleton() {
         int[] indices = new int[indicesSize];
         for (int i = 0; i < indicesSize; i++) {
@@ -208,7 +189,6 @@ public class Model {
         }
         return vertices;
     }
-
     private int[] getIndices_joints() {
         int[] indices = new int[indicesSize];
         for (int i = 0; i < indicesSize; i++) {
@@ -217,12 +197,28 @@ public class Model {
         return indices;
     }
 
-    public int getIndicesSize() {
-        return indicesSize;
-    }
+    private static boolean occlusion(Vector3f origin, Vector3f dir, Vector3f a, Vector3f b, Vector3f c){
+        final float r = 0.1f;
+        Vector3f point = new Vector3f(origin).add(dir);
+        if (point.distance(a) < r || point.distance(b) < r || point.distance(c) < r) return false;
 
-    public void delete() {
-        glController.destroy();
-        shader.delete();
+        float k = Intersectionf.intersectRayTriangle(origin, dir, a, b, c, 0.001f);
+
+        return k >= 0f && k < 1f;
+    }
+    private static String getStrFromFile(String path) {
+        String result = "";
+        try {
+            result = Files.readString(new File(path).toPath());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return result;
+    }
+    private static  <T> T parseJSON(String path, Class<T> T) {
+        return new Gson().fromJson(getStrFromFile(path), T);
+    }
+    private static Vector3f vfl_revY(List<Float> list) {
+        return new Vector3f(list.get(0), -list.get(1), list.get(2));
     }
 }

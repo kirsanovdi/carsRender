@@ -28,8 +28,21 @@ public class Engine {
             modelsList[i] = files[i].getAbsolutePath();
         }
 
-        models.add(new Model(new Vector3f(0f, 0f, 0f), modelsList[0], this));
-        models.add(new Model(new Vector3f(2.5f, 0f, 0f), modelsList[1], this));
+        models.add(new Model(new Vector3f(0f, 0f, 0f), modelsList[0], "skeleton.json", this));
+        models.add(new Model(new Vector3f(2.5f, 0f, 0f), modelsList[1], "skeleton.json", this));
+        models.add(new Model(new Vector3f(5f, 0f, 0f), modelsList[2], "skeleton.json", this));
+
+        models.add(new Model(new Vector3f(0f, -5f, 0f), "src\\main\\resources\\other\\pile3d.json", "pile.json", this));
+
+        System.out.println(1);
+        /*models.add(new Model(new Vector3f(0f, 0f, -5f), modelsList[0], "skeleton.json", this));
+        models.add(new Model(new Vector3f(2.5f, 0f, -5f), modelsList[1], "skeleton.json", this));
+        models.add(new Model(new Vector3f(5f, 0f, -5f), modelsList[2], "skeleton.json", this));
+
+        models.add(new Model(new Vector3f(0f, 0f, -10f), modelsList[0], "skeleton.json", this));
+        models.add(new Model(new Vector3f(2.5f, 0f, -10f), modelsList[1], "skeleton.json", this));
+        models.add(new Model(new Vector3f(5f, 0f, -10f), modelsList[2], "skeleton.json", this));*/
+
     }
 
     public boolean isOccluded(Vector3f v3f, Camera camera) {
@@ -38,6 +51,7 @@ public class Engine {
             for (Model m : models) {
                 if (m.isOccluded(v3f, camera)) {
                     result = true;
+                    break;
                 }
             }
         }
