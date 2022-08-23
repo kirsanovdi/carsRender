@@ -33,7 +33,7 @@ public class Display {
     private void frameRate() {
         long cTime = System.currentTimeMillis();
         if (cTime - pTime >= 1000L) {
-           glfwSetWindowTitle(window, getDescription() + "\t " + fCount + "\t " + mainCamera.position.toString(NumberFormat.getIntegerInstance()));
+            glfwSetWindowTitle(window, getDescription() + "\t " + fCount + "\t " + mainCamera.position.toString(NumberFormat.getIntegerInstance()));
             fCount = 0;
             pTime = cTime;
         }
@@ -50,6 +50,18 @@ public class Display {
 
     private String getDescription() {
         return String.format("Display (%s, %s) \"%s\"", width, height, name);
+    }
+
+    public static float[] getSubWindowVertices(float centerX, float centerY, float rangeX, float rangeY) {
+        return new float[]{
+                centerX - rangeX, centerY + rangeY, 0.0f, 1.0f,
+                centerX - rangeX, centerY - rangeY, 0.0f, 0.0f,
+                centerX + rangeX, centerY - rangeY, 1.0f, 0.0f,
+
+                centerX - rangeX, centerY + rangeY, 0.0f, 1.0f,
+                centerX + rangeX, centerY - rangeY, 1.0f, 0.0f,
+                centerX + rangeX, centerY + rangeY, 1.0f, 1.0f,
+        };
     }
 
     private void initialize() {
@@ -125,19 +137,35 @@ public class Display {
         glEnable(GL_DEPTH_TEST);
         //glEnable(GL_CULL_FACE);
 
+        FrameBuffer fb_main = new FrameBuffer(
+                new Shader("code/shaders/frame/shader.vert", "code/shaders/frame/shader.frag", "code/shaders/frame/shader.geom"),
+                1, width, height, getSubWindowVertices(0f, 0f, 1f, 1f));
+
+        FrameBuffer fb_res = new FrameBuffer(
+                new Shader("code/shaders/frame/shader.vert", "code/shaders/frame/shader.frag", "code/shaders/frame/shader.geom"),
+                2, width, height, getSubWindowVertices(0.75f, 0.75f, 0.25f, 0.25f));
+
         engine = new Engine(this);
         cLint = new CLint(engine);
         engine.launch();
         cLint.launch();
 
         while (!glfwWindowShouldClose(window) && !stop) {
-            glClearColor(0.2f, 0.3f, 0.5f, 1.0f);
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
             mainCamera.mouseInput(window);
             cLint.handleInput(window);
 
-            engine.drawModels(mainCamera);
+            fb_main.renderSubWindow(() -> {
+                glClearColor(0.2f, 0.3f, 0.5f, 1.0f);
+                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+                engine.drawModels(mainCamera);
+            });
+
+            fb_res.renderSubWindow(() -> {
+                glClearColor(0.0f, 0.3f, 0.5f, 1.0f);
+                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+                engine.drawModels(mainCamera);
+            });
 
             frameRate();
             glfwSwapBuffers(window);
