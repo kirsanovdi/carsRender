@@ -14,11 +14,16 @@ public class GlController {
         vertexArrayObject = new VAO();
     }
 
-    public void setupVAO() {
+    public synchronized void setupVAO() {
         vertexArrayObject.bind();
     }
 
-    public void update(){
+    public synchronized void changeIV(Callable<int[]> indices, Callable<float[]> vertices){
+        vertexBufferObject.changeIV(vertices);
+        elementBufferObject.changeIV(indices);
+    }
+
+    public synchronized void update(){
         vertexArrayObject.bind();
         vertexBufferObject.bindRefresh();
         elementBufferObject.bindRefresh();
@@ -31,7 +36,7 @@ public class GlController {
         elementBufferObject.unbind();
     }
 
-    public void destroy() {
+    public synchronized void destroy() {
         vertexArrayObject.delete();
         vertexBufferObject.delete();
         elementBufferObject.delete();

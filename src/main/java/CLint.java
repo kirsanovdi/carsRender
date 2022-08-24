@@ -37,9 +37,10 @@ public class CLint {
 
     public void handleInput(long window) {
         keyHandler(window, Instruction.STOP, GLFW_KEY_Q, engine::stop);
-        keyHandler(window, Instruction.SKELETON, GLFW_KEY_R, () -> engine.switchRenderType(Instruction.SKELETON));
-        keyHandler(window, Instruction.FULL, GLFW_KEY_T, () -> engine.switchRenderType(Instruction.FULL));
+        keyHandler(window, Instruction.FULL, GLFW_KEY_R, () -> engine.switchRenderType(Instruction.FULL));
+        keyHandler(window, Instruction.SKELETON, GLFW_KEY_T, () -> engine.switchRenderType(Instruction.SKELETON));
         keyHandler(window, Instruction.JOINTS_ONLY, GLFW_KEY_Y, () -> engine.switchRenderType(Instruction.JOINTS_ONLY));
+        keyHandler(window, Instruction.VISIBLE_ONLY, GLFW_KEY_U, () -> engine.switchRenderType(Instruction.VISIBLE_ONLY));
     }
 
     private void handleCommand(String command) {

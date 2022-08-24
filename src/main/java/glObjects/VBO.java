@@ -7,7 +7,7 @@ import static org.lwjgl.opengl.GL46.*;
 
 public class VBO {
     private final int id;
-    private final Callable<float[]> callable;
+    private Callable<float[]> callable;
 
     public VBO(Callable<float[]> callable) {
         id = glGenBuffers();
@@ -18,6 +18,10 @@ public class VBO {
     public void bindRefresh() {
         bind();
         refresh();
+    }
+
+    public void changeIV(Callable<float[]> callable){
+        this.callable = callable;
     }
 
     public void refresh() {

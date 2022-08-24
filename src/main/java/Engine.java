@@ -8,6 +8,7 @@ public class Engine {
     public final Display display;
     private final Thread engine;
 
+    public Instruction lastType = Instruction.FULL;
 
     private final String[] modelsList;
     public final List<Model> models;
@@ -84,6 +85,7 @@ public class Engine {
         for (Model m : models) {
             m.switchRenderType(rt);
         }
+        lastType = rt;
     }
 
     /**

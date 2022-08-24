@@ -5,13 +5,14 @@ import org.joml.Vector3f;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
 import static org.lwjgl.opengl.GL46.*;
 
 public class Model {
-    private  int indicesSize, verticesSize;
+    private volatile int indicesSize, verticesSize;
     public boolean[] vertVisibility;
 
     private Engine engine;
@@ -22,6 +23,8 @@ public class Model {
 
     private final static Shader shader_standard = new Shader("code/shaders/standard/shader.vert", "code/shaders/standard/shader.frag", "code/shaders/standard/shader.geom");
     private final static Shader shader_joints = new Shader("code/shaders/joints_only/shader.vert", "code/shaders/joints_only/shader.frag", "code/shaders/joints_only/shader.geom");
+
+    //private final GlController controller_standard, controller_skeleton, controller_joints, controller_visible;
 
     public static void clearStatic(){
         shader_standard.delete();
@@ -51,6 +54,11 @@ public class Model {
         this.car = parseJSON(toJSON, Car.class);
         this.skeleton = parseJSON("src\\main\\resources\\other\\" + skeletonName, Skeleton.class);
 
+        //this.controller_joints = new GlController(this::getIndices_joints, this::getVertices_joints);
+        //this.controller_visible = new GlController(this::getIndices_visible, this::getVertices_visible);
+        //this.controller_standard = new GlController(this::getIndices_standard, this::getVertices_standard);
+        //this.controller_skeleton = new GlController(this::getIndices_skeleton, this::getVertices_skeleton);
+
         this.shader = shader_standard;
         this.glController = new GlController(this::getIndices_standard, this::getVertices_standard);
         this.GL_DRAWMODE = GL_TRIANGLES;
@@ -67,26 +75,34 @@ public class Model {
             case FULL -> {
                 shader = shader_standard;
                 GL_DRAWMODE = GL_TRIANGLES;
-                glController.destroy();
-                glController = new GlController(this::getIndices_standard, this::getVertices_standard);
+                //glController = controller_standard;
+                glController.changeIV(this::getIndices_standard, this::getVertices_standard);
                 verticesSize = car.vertices.size();
                 indicesSize = car.faces.size() * 3;
             }
             case SKELETON -> {
                 shader = shader_standard;
                 GL_DRAWMODE = GL_TRIANGLES;
-                glController.destroy();
-                glController = new GlController(this::getIndices_skeleton, this::getVertices_skeleton);
+                //glController = controller_skeleton;
+                glController.changeIV(this::getIndices_skeleton, this::getVertices_skeleton);
                 verticesSize = skeleton.keypoint_labels.size();
                 indicesSize = skeleton.triangles.size() * 3;
             }
             case JOINTS_ONLY -> {
                 shader = shader_joints;
                 GL_DRAWMODE = GL_LINES;
-                glController.destroy();
-                glController = new GlController(this::getIndices_joints, this::getVertices_joints);
+                //glController = controller_joints;
+                glController.changeIV(this::getIndices_joints, this::getVertices_joints);
                 verticesSize = skeleton.keypoint_labels.size();
                 indicesSize = skeleton.joints.size() * 2;
+            }
+            case VISIBLE_ONLY -> {
+                shader = shader_joints;
+                GL_DRAWMODE = GL_LINES;
+                //glController = controller_visible;
+                glController.changeIV(this::getIndices_visible, this::getVertices_visible);
+                verticesSize = skeleton.keypoint_labels.size();
+                indicesSize = 0;//skeleton.joints.size() * 2;
             }
         }
     }
@@ -103,9 +119,13 @@ public class Model {
         shader.transferCamera(camera);
         glController.update();
         glController.setupVAO();
-        glDrawElements(GL_DRAWMODE, getIndicesSize(), GL_UNSIGNED_INT, 0);
+        glDrawElements(GL_DRAWMODE, indicesSize, GL_UNSIGNED_INT, 0);
     }
     public synchronized void delete() {
+        //controller_standard.destroy();
+        //controller_joints.destroy();
+        //controller_skeleton.destroy();
+        //controller_visible.destroy();
         glController.destroy();
         System.out.println("Model " + this.toString() + "\t deleted");
     }
@@ -115,10 +135,6 @@ public class Model {
     }
     public void rotate(float aX, float aY, float aZ){
 
-    }
-
-    private int getIndicesSize() {
-        return indicesSize;
     }
 
     public synchronized boolean isOccluded(Vector3f v, Camera camera){
@@ -207,6 +223,37 @@ public class Model {
         }
         return indices;
     }
+
+    private float[] getVertices_visible(){
+        float[] vertices = new float[verticesSize * 5];
+        for (int i = 0; i < verticesSize; i++) {
+            Vector3f v3f = vfl_revY(getTriangleBySkeletonID(i));
+            vertices[i * 5] = v3f.x + position.x;
+            vertices[i * 5 + 1] = v3f.y + position.y;
+            vertices[i * 5 + 2] = v3f.z + position.z;
+            //final Vector3f curPos = new Vector3f(v3f.x + position.x, v3f.y + position.y, v3f.z + position.z);
+            //final float height = (vertVisibility[i]?1f:0f);
+            vertices[i * 5 + 3] = 1f;
+            vertices[i * 5 + 4] = 1f;
+        }
+        return vertices;
+    }
+    private int[] getIndices_visible() {
+
+        final int[] indices = new int[skeleton.joints.size() * 2];
+        int k = 0;
+        for (int i = 0; i < skeleton.joints.size(); i++) {
+            final int a = skeleton.joints.get(i).get(0);
+            final int b = skeleton.joints.get(i).get(1);
+            if(!vertVisibility[a] && !vertVisibility[b]){
+                indices[k++] = a;
+                indices[k++] = b;
+            }
+        }
+        indicesSize = k;
+        return Arrays.copyOfRange(indices, 0, k);
+    }
+
 
     private static boolean occlusion(Vector3f origin, Vector3f dir, Vector3f a, Vector3f b, Vector3f c){
         final float r = 0.1f;

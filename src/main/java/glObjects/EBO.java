@@ -9,7 +9,7 @@ import static org.lwjgl.opengl.GL46.*;
  */
 public class EBO {
     private final int id;
-    private final Callable<int[]> callable;
+    private Callable<int[]> callable;
 
     public EBO(Callable<int[]> callable) {
         id = glGenBuffers();
@@ -20,6 +20,10 @@ public class EBO {
     public void bindRefresh() {
         bind();
         refresh();
+    }
+
+    public void changeIV(Callable<int[]> callable){
+        this.callable = callable;
     }
 
     public void refresh() {
