@@ -1,3 +1,9 @@
+package graphics;
+
+import controller.CLint;
+import engine.Engine;
+import controller.Instruction;
+import engine.Model;
 import org.joml.Vector3f;
 import org.lwjgl.Version;
 import org.lwjgl.glfw.GLFWErrorCallback;
@@ -7,6 +13,7 @@ import org.lwjgl.system.MemoryStack;
 
 import java.nio.IntBuffer;
 import java.text.NumberFormat;
+import java.util.List;
 import java.util.Objects;
 
 import static org.lwjgl.glfw.Callbacks.glfwFreeCallbacks;
@@ -49,7 +56,7 @@ public class Display {
     }
 
     private String getDescription() {
-        return String.format("Display (%s, %s) \"%s\"", width, height, name);
+        return String.format("graphics.Display (%s, %s) \"%s\"", width, height, name);
     }
 
     public static float[] getSubWindowVertices(float centerX, float centerY, float rangeX, float rangeY) {
@@ -131,22 +138,34 @@ public class Display {
         System.out.println(getDescription() + " stopped");
     }
 
+    private void drawModels(List<Model> models, Camera camera){
+        for (Model m : models) {
+            m.draw(camera);
+        }
+    }
+
+    public void switchRenderType(List<Model> models, Instruction rt) {
+        for (Model m : models) {
+            m.switchRenderType(rt);
+        }
+    }
+
     private void processGUI() {
         GL.createCapabilities();
         glClearColor(1.0f, 1.0f, 1.0f, 0.0f);
         glEnable(GL_DEPTH_TEST);
         //glEnable(GL_CULL_FACE);
 
-        FrameBuffer fb_main = new FrameBuffer(
-                new Shader("code/shaders/frame/shader.vert", "code/shaders/frame/shader.frag", "code/shaders/frame/shader.geom"),
+        final FrameBuffer fb_main = new FrameBuffer(
+                Shader.shader_frame,
                 1, width, height, getSubWindowVertices(0f, 0f, 1f, 1f));
 
-        FrameBuffer fb_res = new FrameBuffer(
-                new Shader("code/shaders/frame/shader.vert", "code/shaders/frame/shader.frag", "code/shaders/frame/shader.geom"),
-                2, width, height, getSubWindowVertices(0.75f, 0.75f, 0.25f, 0.25f));
+        final FrameBuffer fb_res = new FrameBuffer(
+                Shader.shader_frame,
+                2, width, height, getSubWindowVertices(0.70f, 0.70f, 0.3f, 0.3f));
 
         engine = new Engine(this);
-        cLint = new CLint(engine);
+        cLint = new CLint(engine, this);
         engine.launch();
         cLint.launch();
 
@@ -158,22 +177,22 @@ public class Display {
             fb_main.renderSubWindow(() -> {
                 glClearColor(0.2f, 0.3f, 0.5f, 1.0f);
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-                engine.drawModels(mainCamera);
+                drawModels(engine.getModels(), mainCamera);
             });
 
             fb_res.renderSubWindow(() -> {
                 glClearColor(0.0f, 0.3f, 0.5f, 1.0f);
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-                Instruction lt = engine.lastType;
-                engine.switchRenderType(Instruction.VISIBLE_ONLY);
-                engine.drawModels(mainCamera);
-                engine.switchRenderType(lt);
+                //Instruction lt = engine.getModels().get(0).lt;
+                //switchRenderType(engine.getModels(), Instruction.VISIBLE_ONLY);
+                drawModels(engine.getModels(), mainCamera);
+                //switchRenderType(engine.getModels(), lt);
             });
 
             frameRate();
             glfwSwapBuffers(window);
             glfwPollEvents();
         }
-        Model.clearStatic();
+        Shader.clearStatic();
     }
 }

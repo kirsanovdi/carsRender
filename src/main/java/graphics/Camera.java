@@ -1,3 +1,5 @@
+package graphics;
+
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.lwjgl.system.MemoryStack;
@@ -44,7 +46,7 @@ public class Camera {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             glUniformMatrix4fv(projLoc, false, matrix4f.get(stack.mallocFloat(16)));
         } catch (Exception e) {
-            System.out.println(e + " error in Camera");
+            System.out.println(e + " error in graphics.Camera");
         }
     }
 

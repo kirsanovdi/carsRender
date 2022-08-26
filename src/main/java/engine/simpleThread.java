@@ -1,3 +1,5 @@
+package engine;
+
 public class simpleThread {
     private Runnable runnable;
     private Thread thread;
@@ -14,7 +16,7 @@ public class simpleThread {
             try {
                 Thread.sleep(20L);
             } catch (InterruptedException e) {
-                System.out.println("exception in simpleThread cycle");
+                System.out.println("exception in engine.simpleThread cycle");
             }
         }
     }
@@ -33,7 +35,7 @@ public class simpleThread {
         try {
             thread.join();
         } catch (InterruptedException e) {
-            System.out.println("exception in simpleThread");
+            System.out.println("exception in engine.simpleThread");
         }
     }
 }

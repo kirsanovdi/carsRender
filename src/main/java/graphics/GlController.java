@@ -1,5 +1,6 @@
+package graphics;
 
-import glObjects.*;
+import graphics.glObjects.*;
 
 import java.util.concurrent.Callable;
 

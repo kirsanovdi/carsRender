@@ -1,4 +1,4 @@
-package glObjects;
+package graphics.glObjects;
 
 import static org.lwjgl.opengl.GL46.*;
 

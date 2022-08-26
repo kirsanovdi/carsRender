@@ -1,4 +1,4 @@
-package glObjects;
+package graphics.glObjects;
 
 
 import java.util.concurrent.Callable;

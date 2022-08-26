@@ -1,4 +1,5 @@
 import com.google.gson.Gson;
+import graphics.Display;
 import org.junit.jupiter.api.Test;
 
 import java.io.BufferedReader;
@@ -49,6 +50,12 @@ public class Main {
             }
         }
         return result;
+    }
+
+    @Test
+    public void a(){
+        Display display = new Display();
+        display.run();
     }
 
     @Test

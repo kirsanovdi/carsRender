@@ -1,4 +1,10 @@
+package engine;
+
 import com.google.gson.Gson;
+import controller.Instruction;
+import graphics.Camera;
+import graphics.GlController;
+import graphics.Shader;
 import org.joml.Intersectionf;
 import org.joml.Vector3f;
 
@@ -13,23 +19,15 @@ import static org.lwjgl.opengl.GL46.*;
 
 public class Model {
     private volatile int indicesSize, verticesSize;
-    public boolean[] vertVisibility;
+    public final boolean[] vertVisibility;
 
     private Engine engine;
 
     private GlController glController;
     private Shader shader;
     private int GL_DRAWMODE;
-
-    private final static Shader shader_standard = new Shader("code/shaders/standard/shader.vert", "code/shaders/standard/shader.frag", "code/shaders/standard/shader.geom");
-    private final static Shader shader_joints = new Shader("code/shaders/joints_only/shader.vert", "code/shaders/joints_only/shader.frag", "code/shaders/joints_only/shader.geom");
-
-    //private final GlController controller_standard, controller_skeleton, controller_joints, controller_visible;
-
-    public static void clearStatic(){
-        shader_standard.delete();
-        shader_joints.delete();
-    }
+    public Instruction lt;
+    //private final graphics.GlController controller_standard, controller_skeleton, controller_joints, controller_visible;
 
     private final Vector3f position;
     private final Car car;
@@ -54,66 +52,48 @@ public class Model {
         this.car = parseJSON(toJSON, Car.class);
         this.skeleton = parseJSON("src\\main\\resources\\other\\" + skeletonName, Skeleton.class);
 
-        //this.controller_joints = new GlController(this::getIndices_joints, this::getVertices_joints);
-        //this.controller_visible = new GlController(this::getIndices_visible, this::getVertices_visible);
-        //this.controller_standard = new GlController(this::getIndices_standard, this::getVertices_standard);
-        //this.controller_skeleton = new GlController(this::getIndices_skeleton, this::getVertices_skeleton);
-
-        this.shader = shader_standard;
         this.glController = new GlController(this::getIndices_standard, this::getVertices_standard);
-        this.GL_DRAWMODE = GL_TRIANGLES;
-        verticesSize = car.vertices.size();
-        indicesSize = car.faces.size() * 3;
+        switchRenderType(Instruction.FULL);
 
         this.vertVisibility = new boolean[skeleton.keypoint_labels.size()];
         this.position = new Vector3f(position);
-        System.out.println("Model " + this.toString() + "\t" + position + "\t" + toJSON + "\t created");
+        System.out.println("engine.Model " + this + "\t" + position + "\t" + toJSON + "\t created");
     }
 
     public synchronized void switchRenderType(Instruction rt){
         switch (rt){
             case FULL -> {
-                shader = shader_standard;
+                shader = Shader.shader_standard;
                 GL_DRAWMODE = GL_TRIANGLES;
-                //glController = controller_standard;
                 glController.changeIV(this::getIndices_standard, this::getVertices_standard);
                 verticesSize = car.vertices.size();
                 indicesSize = car.faces.size() * 3;
             }
             case SKELETON -> {
-                shader = shader_standard;
+                shader = Shader.shader_standard;
                 GL_DRAWMODE = GL_TRIANGLES;
-                //glController = controller_skeleton;
                 glController.changeIV(this::getIndices_skeleton, this::getVertices_skeleton);
                 verticesSize = skeleton.keypoint_labels.size();
                 indicesSize = skeleton.triangles.size() * 3;
             }
             case JOINTS_ONLY -> {
-                shader = shader_joints;
+                shader = Shader.shader_joints;
                 GL_DRAWMODE = GL_LINES;
-                //glController = controller_joints;
                 glController.changeIV(this::getIndices_joints, this::getVertices_joints);
                 verticesSize = skeleton.keypoint_labels.size();
                 indicesSize = skeleton.joints.size() * 2;
             }
             case VISIBLE_ONLY -> {
-                shader = shader_joints;
+                shader = Shader.shader_joints;
                 GL_DRAWMODE = GL_LINES;
-                //glController = controller_visible;
                 glController.changeIV(this::getIndices_visible, this::getVertices_visible);
                 verticesSize = skeleton.keypoint_labels.size();
                 indicesSize = 0;//skeleton.joints.size() * 2;
             }
         }
+        lt = rt;
     }
-    public void calcVisibility(){
-        for(int i = 0; i < vertVisibility.length; i++){
-            final Vector3f v3f = vfl_revY(getTriangleBySkeletonID(i));
-            final Vector3f curPos = new Vector3f(v3f.x + position.x, v3f.y + position.y, v3f.z + position.z);
 
-            vertVisibility[i] = engine.isOccluded(curPos, engine.display.mainCamera);
-        }
-    }
     public synchronized void draw(Camera camera) {
         shader.activate();
         shader.transferCamera(camera);
@@ -121,13 +101,10 @@ public class Model {
         glController.setupVAO();
         glDrawElements(GL_DRAWMODE, indicesSize, GL_UNSIGNED_INT, 0);
     }
+
     public synchronized void delete() {
-        //controller_standard.destroy();
-        //controller_joints.destroy();
-        //controller_skeleton.destroy();
-        //controller_visible.destroy();
         glController.destroy();
-        System.out.println("Model " + this.toString() + "\t deleted");
+        System.out.println("engine.Model " + this + "\t deleted");
     }
 
     public void move(float x, float y , float z){
@@ -158,6 +135,10 @@ public class Model {
 
     private List<Float> getTriangleBySkeletonID(int i){
         return car.vertices.get(car.pts.get(skeleton.keypoint_labels.get(i)));
+    }
+
+    public Vector3f getVec3inSkeleton(int i){
+        return  vfl_revY(getTriangleBySkeletonID(i)).add(position);
     }
 
     private float[] getVertices_standard() {

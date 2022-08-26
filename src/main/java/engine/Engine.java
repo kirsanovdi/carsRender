@@ -1,3 +1,8 @@
+package engine;
+
+import controller.Instruction;
+import graphics.Camera;
+import graphics.Display;
 import org.joml.Vector3f;
 
 import java.io.*;
@@ -8,21 +13,19 @@ public class Engine {
     public final Display display;
     private final Thread engine;
 
-    public Instruction lastType = Instruction.FULL;
-
     private final String[] modelsList;
-    public final List<Model> models;
+    private final List<Model> models;
 
     public boolean stop;
 
     public Engine(Display display) {
         this.display = display;
 
-        engine = new Thread(this::processEngine);
-        models = new ArrayList<>();
+        this.engine = new Thread(this::processEngine);
+        this.models = new ArrayList<>();
 
-        File folder = new File("src/main/resources/models");
-        File[] files = folder.listFiles();
+        final File folder = new File("src/main/resources/models");
+        final File[] files = folder.listFiles();
 
         modelsList = new String[files.length];
         for (int i = 0; i < files.length; i++) {
@@ -35,7 +38,7 @@ public class Engine {
         models.add(new Model(new Vector3f(2.5f, 0f, -6f), modelsList[1], "skeleton.json", this));
         models.add(new Model(new Vector3f(5f, 0f, -6f), modelsList[2], "skeleton.json", this));
 
-        //models.add(new Model(new Vector3f(0f, -1f, 0f), "src\\main\\resources\\other\\pile3d.json", "pile.json", this));
+        //models.add(new engine.Model(new Vector3f(0f, -1f, 0f), "src\\main\\resources\\other\\pile3d.json", "pile.json", this));
 
         models.add(new Model(new Vector3f(0f, 0f, -12f), modelsList[3], "skeleton.json", this));
         models.add(new Model(new Vector3f(2.5f, 0f, -12f), modelsList[5], "skeleton.json", this));
@@ -51,6 +54,10 @@ public class Engine {
             }
         }
 
+    }
+
+    public List<Model> getModels(){
+        return models;
     }
 
     public boolean isOccluded(Vector3f v3f, Camera camera) {
@@ -81,39 +88,30 @@ public class Engine {
         System.out.println("engine stopped");
     }
 
-    public void switchRenderType(Instruction rt) {
-        for (Model m : models) {
-            m.switchRenderType(rt);
-        }
-        lastType = rt;
-    }
-
-    /**
-     * not on engine
-     */
-    public void drawModels(Camera camera) {
-        for (Model m : models) {
-            m.draw(camera);
-        }
-    }
-
     public void printModelList() {
         for (int i = 0; i < modelsList.length; i++) {
             System.out.println(i + ":\t" + modelsList[i]);
         }
     }
 
+    private void calcVisibility(Model m){
+        for(int i = 0; i < m.vertVisibility.length; i++){
+            final Vector3f pos = m.getVec3inSkeleton(i);
+            m.vertVisibility[i] = isOccluded(pos, display.mainCamera);
+        }
+    }
+
     private void processEngine() {
         final int k = 4;
         final int mc = models.size();
-        final int perThread = mc/k;
+        final int perThread = mc / k;
         simpleThread[] simpleThreads = new simpleThread[k];
-        for (int i = 0; i < k; i++){
+        for (int i = 0; i < k; i++) {
             final int r = i;
             simpleThreads[i] = new simpleThread();
             simpleThreads[i].changeProcess(() -> {
-                for(int j = perThread * r; j <= Math.min(perThread * (r + 1), mc - 1); j++){
-                    models.get(j).calcVisibility();
+                for (int j = perThread * r; j <= Math.min(perThread * (r + 1), mc - 1); j++) {
+                    calcVisibility(models.get(j));
                 }
             });
             simpleThreads[i].start();
@@ -121,7 +119,7 @@ public class Engine {
 
         while (!stop) {
 
-            //for (Model m : models) {
+            //for (engine.Model m : models) {
             //    m.calcVisibility();
             //}
 
@@ -131,7 +129,7 @@ public class Engine {
                 e.printStackTrace();
             }
         }
-        for(int i = 0; i < k; i++){
+        for (int i = 0; i < k; i++) {
             simpleThreads[i].stop();
         }
     }
